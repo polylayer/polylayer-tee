@@ -1,0 +1,52 @@
+[package]
+name        = "polylayer-tee-core"
+version     = "0.1.0"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+
+[lib]
+name = "polylayer_tee_core"
+
+# Core has no I/O. Pure signing + derivation + canonical encoding. Keeps
+# the crate cheap to test (no tokio) and reusable from any host.
+[dependencies]
+k256             = { workspace = true }
+ed25519-dalek    = { workspace = true }
+sha2             = { workspace = true }
+sha3             = { workspace = true }
+hkdf             = { workspace = true }
+hmac             = { workspace = true }
+base64           = "0.22"
+rand_core        = { workspace = true }
+zeroize          = { workspace = true }
+
+bip39            = { workspace = true }
+bip32            = { workspace = true }
+bs58             = { workspace = true }
+
+solana-pubkey      = { workspace = true }
+solana-instruction = { workspace = true }
+solana-message     = { workspace = true }
+solana-transaction = { workspace = true }
+solana-signature   = { workspace = true }
+solana-hash        = { workspace = true }
+bincode            = { workspace = true }
+
+alloy-primitives = { workspace = true }
+alloy-sol-types  = { workspace = true }
+rlp              = { workspace = true }
+
+serde            = { workspace = true }
+serde_json       = { workspace = true }
+serde_bytes      = { workspace = true }
+rmp-serde        = { workspace = true }
+hex              = { workspace = true }
+
+thiserror = { workspace = true }
+once_cell = { workspace = true }
+
+[dev-dependencies]
+proptest         = { workspace = true }
+serde_json       = { workspace = true }

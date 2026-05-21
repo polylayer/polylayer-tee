@@ -1,0 +1,28 @@
+[package]
+name        = "polylayer-tee-nsm"
+version     = "0.1.0"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+
+[lib]
+name = "polylayer_tee_nsm"
+
+# Thin wrapper over `aws-nitro-enclaves-nsm-api` for generating
+# attestation documents. Outside the enclave (CI tests, local dev), the
+# `mock` feature provides a stub that returns canned bytes — lets the
+# rest of the stack run on a laptop without a real NSM device.
+[features]
+default = []
+mock    = []
+
+[dependencies]
+thiserror = { workspace = true }
+tracing   = { workspace = true }
+rand_core = { workspace = true }
+
+# Real NSM API — only pulled on Linux when not in mock mode. The crate
+# links against /dev/nsm via ioctls and won't work outside an enclave.
+[target.'cfg(target_os = "linux")'.dependencies]
+aws-nitro-enclaves-nsm-api = { workspace = true }

@@ -1,0 +1,48 @@
+[package]
+name        = "polylayer-tee-server"
+version     = "0.1.0"
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+publish.workspace      = true
+
+[[bin]]
+name = "polylayer-tee-server"
+path = "src/main.rs"
+
+# Axum service wiring the core signing logic to HTTP routes that mirror
+# the existing eigen-tee surface.
+[dependencies]
+polylayer-tee-core    = { path = "../core" }
+polylayer-tee-storage = { path = "../storage" }
+polylayer-tee-nsm     = { path = "../nsm" }
+
+tokio       = { workspace = true }
+axum        = { workspace = true }
+tower       = { workspace = true }
+tower-http  = { workspace = true }
+hyper       = { workspace = true }
+hyper-util  = { workspace = true, features = ["server", "server-auto", "service"] }
+tokio-vsock = { workspace = true }
+
+serde       = { workspace = true }
+serde_json  = { workspace = true }
+hex         = { workspace = true }
+bs58        = { workspace = true }
+
+tracing             = { workspace = true }
+tracing-subscriber  = { workspace = true }
+
+anyhow    = { workspace = true }
+thiserror = { workspace = true }
+zeroize   = { workspace = true }
+
+alloy-primitives = { workspace = true }
+subtle           = "2.6"
+
+# Needed for the jupiter-tx route to deserialize VersionedTransaction
+# before passing to core's signer.
+solana-pubkey      = { workspace = true }
+solana-transaction = { workspace = true }
+bincode            = { workspace = true }
+base64             = "0.22"

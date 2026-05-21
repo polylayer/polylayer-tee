@@ -17,6 +17,18 @@ pub const CTF_EXCHANGE_V2_ADDRESS: Address =
 pub const NEG_RISK_CTF_EXCHANGE_V2_ADDRESS: Address =
     address!("e2222d279d744050d28e00520010520000310F59");
 
+// ─── DepositWallet bootstrap-approval targets (V2 collateral flow) ──
+/// pUSD — the Polymarket V2 collateral token. Target of `approve`.
+pub const PUSD_CONTRACT_ADDRESS: Address =
+    address!("C011a7E12a19f7B1f670d46F03B03f3342E82DFB");
+/// Conditional Tokens Framework. Target of `setApprovalForAll`.
+pub const CTF_CONTRACT_ADDRESS: Address =
+    address!("4D97DCd97eC945f40cF65F87097ACe5EA0476045");
+/// Neg-risk adapter — the third V2 exchange spender, alongside the two
+/// CTF exchanges above. The bootstrap batch approves all three.
+pub const NEG_RISK_ADAPTER_ADDRESS: Address =
+    address!("d91E80cF2E7be2e162c6513ceD06f1dD0dA35296");
+
 // ─── DepositWallet factory ──────────────────────────────────────────
 pub const DEPOSIT_WALLET_FACTORY_ADDRESS: Address =
     address!("00000000000Fb5C9ADea0298D729A0CB3823Cc07");

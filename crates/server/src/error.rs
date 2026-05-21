@@ -57,6 +57,15 @@ impl ApiError {
             message: message.into(),
         }
     }
+
+    /// A request shape that is recognized but not yet signable.
+    pub fn not_implemented(code: &'static str, message: impl Into<String>) -> Self {
+        Self {
+            status: StatusCode::NOT_IMPLEMENTED,
+            code,
+            message: message.into(),
+        }
+    }
 }
 
 impl IntoResponse for ApiError {

@@ -18,6 +18,7 @@ pub mod sign_hyperliquid_order;
 pub mod sign_jupiter_tx;
 pub mod sign_link_message;
 pub mod sign_polymarket_order;
+pub mod sign_polymarket_wallet_batch;
 pub mod sign_solana_liquidation;
 pub mod sign_solana_price_twap;
 pub mod sign_solana_resolution;

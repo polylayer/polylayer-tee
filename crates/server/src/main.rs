@@ -8,7 +8,6 @@
 //! env vars — the bootstrap then falls back to the env value.
 
 use anyhow::{Context, Result};
-use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::Router;
 use polylayer_tee_core::derive::Master;
@@ -320,9 +319,7 @@ fn build_router(state: Arc<AppState>) -> Router {
         )
         .route(
             "/v1/sign/polymarket-wallet-batch",
-            post(|| async {
-                (StatusCode::NOT_IMPLEMENTED, "wallet-batch: pending batch assertion helpers (task #189)")
-            }),
+            post(routes::sign_polymarket_wallet_batch::handler),
         )
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),

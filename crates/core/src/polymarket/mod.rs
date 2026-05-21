@@ -12,8 +12,8 @@ pub mod deposit_wallet;
 pub mod sign;
 
 pub use batch::{
-    sign_deposit_wallet_batch, BatchError, DepositWalletBatchSignature, DepositWalletCall,
-    SignBatchArgs,
+    bootstrap_approval_calls, sign_deposit_wallet_batch, BatchError, DepositWalletBatchSignature,
+    DepositWalletCall, SignBatchArgs,
 };
 pub use deposit_wallet::derive_deposit_wallet_address;
 pub use sign::{sign_v2_order, PolymarketError, SignV2OrderArgs, V2Order, V2OrderSignature};

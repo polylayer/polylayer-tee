@@ -16,8 +16,9 @@ use sha3::{Digest, Keccak256};
 use thiserror::Error;
 
 use super::constants::{
-    DEPOSIT_WALLET_DOMAIN_NAME_HASH, DEPOSIT_WALLET_DOMAIN_VERSION_HASH, EIP712_DOMAIN_TYPE_HASH,
-    POLYGON_CHAIN_ID,
+    CTF_CONTRACT_ADDRESS, CTF_EXCHANGE_V2_ADDRESS, DEPOSIT_WALLET_DOMAIN_NAME_HASH,
+    DEPOSIT_WALLET_DOMAIN_VERSION_HASH, EIP712_DOMAIN_TYPE_HASH, NEG_RISK_ADAPTER_ADDRESS,
+    NEG_RISK_CTF_EXCHANGE_V2_ADDRESS, POLYGON_CHAIN_ID, PUSD_CONTRACT_ADDRESS,
 };
 use crate::derive::evm_address_from_verifying_key;
 
@@ -37,7 +38,7 @@ pub enum BatchError {
 }
 
 /// A single call within a DepositWallet.Batch.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DepositWalletCall {
     pub target: Address,
     pub value: U256,
@@ -58,6 +59,72 @@ pub struct SignBatchArgs<'a> {
     pub nonce: U256,
     pub deadline: U256,
     pub calls: &'a [DepositWalletCall],
+}
+
+// ─── Bootstrap batch reconstruction ──────────────────────────────────
+//
+// The deposit-wallet bootstrap batch is fully canonical: pUSD `approve`
+// and CTF `setApprovalForAll`, both at max, for every V2 exchange
+// spender. The enclave reconstructs it from these constants rather than
+// trusting caller-supplied calldata, so there is no per-call assertion
+// to perform — there is nothing variable to assert.
+
+/// `approve(address,uint256)` 4-byte selector.
+const APPROVE_SELECTOR: [u8; 4] = [0x09, 0x5e, 0xa7, 0xb3];
+/// `setApprovalForAll(address,bool)` 4-byte selector.
+const SET_APPROVAL_FOR_ALL_SELECTOR: [u8; 4] = [0xa2, 0x2c, 0xb4, 0x65];
+
+/// The three V2 exchange spenders the bootstrap batch approves.
+const BOOTSTRAP_SPENDERS: [Address; 3] = [
+    CTF_EXCHANGE_V2_ADDRESS,
+    NEG_RISK_CTF_EXCHANGE_V2_ADDRESS,
+    NEG_RISK_ADAPTER_ADDRESS,
+];
+
+/// ABI-encode an `address` as a 32-byte left-padded word.
+fn abi_word_address(addr: Address) -> [u8; 32] {
+    let mut w = [0u8; 32];
+    w[12..].copy_from_slice(addr.as_slice());
+    w
+}
+
+fn encode_approve(spender: Address, amount: U256) -> Vec<u8> {
+    let mut data = Vec::with_capacity(4 + 64);
+    data.extend_from_slice(&APPROVE_SELECTOR);
+    data.extend_from_slice(&abi_word_address(spender));
+    data.extend_from_slice(&amount.to_be_bytes::<32>());
+    data
+}
+
+fn encode_set_approval_for_all(operator: Address, approved: bool) -> Vec<u8> {
+    let mut data = Vec::with_capacity(4 + 64);
+    data.extend_from_slice(&SET_APPROVAL_FOR_ALL_SELECTOR);
+    data.extend_from_slice(&abi_word_address(operator));
+    let mut flag = [0u8; 32];
+    flag[31] = u8::from(approved);
+    data.extend_from_slice(&flag);
+    data
+}
+
+/// Reconstruct the canonical DepositWallet bootstrap batch — `approve`
+/// on pUSD and `setApprovalForAll` on the CTF, both at max, for each V2
+/// exchange spender. Call order matches the lambda's builder so the
+/// EIP-712 `Call[]` hash is identical.
+pub fn bootstrap_approval_calls() -> Vec<DepositWalletCall> {
+    let mut calls = Vec::with_capacity(BOOTSTRAP_SPENDERS.len() * 2);
+    for spender in BOOTSTRAP_SPENDERS {
+        calls.push(DepositWalletCall {
+            target: PUSD_CONTRACT_ADDRESS,
+            value: U256::ZERO,
+            data: encode_approve(spender, U256::MAX),
+        });
+        calls.push(DepositWalletCall {
+            target: CTF_CONTRACT_ADDRESS,
+            value: U256::ZERO,
+            data: encode_set_approval_for_all(spender, true),
+        });
+    }
+    calls
 }
 
 // ─── EIP-712 type strings ────────────────────────────────────────────
@@ -262,6 +329,37 @@ mod tests {
         })
         .unwrap();
         assert_eq!(a.signature, b.signature);
+    }
+
+    #[test]
+    fn selectors_match_keccak() {
+        assert_eq!(
+            &APPROVE_SELECTOR[..],
+            &keccak256_to_b256(b"approve(address,uint256)").as_slice()[..4],
+        );
+        assert_eq!(
+            &SET_APPROVAL_FOR_ALL_SELECTOR[..],
+            &keccak256_to_b256(b"setApprovalForAll(address,bool)").as_slice()[..4],
+        );
+    }
+
+    #[test]
+    fn bootstrap_batch_is_six_canonical_calls() {
+        let calls = bootstrap_approval_calls();
+        assert_eq!(calls.len(), 6, "3 spenders x (approve + setApprovalForAll)");
+        for (i, c) in calls.iter().enumerate() {
+            assert_eq!(c.value, U256::ZERO);
+            assert_eq!(c.data.len(), 4 + 64);
+            if i % 2 == 0 {
+                assert_eq!(c.target, PUSD_CONTRACT_ADDRESS);
+                assert_eq!(&c.data[..4], &APPROVE_SELECTOR[..]);
+            } else {
+                assert_eq!(c.target, CTF_CONTRACT_ADDRESS);
+                assert_eq!(&c.data[..4], &SET_APPROVAL_FOR_ALL_SELECTOR[..]);
+            }
+        }
+        // Deterministic — every call to it yields the identical batch.
+        assert_eq!(bootstrap_approval_calls(), calls);
     }
 
     #[test]
